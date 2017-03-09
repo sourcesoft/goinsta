@@ -153,6 +153,26 @@ func (insta *Instagram) Login() error {
 	insta.IsLoggedIn = true
 	insta.LoggedInUser = Result.LoggedInUser
 
+	bytes, err := json.Marshal(map[string]interface{}{
+    "_uuid":      insta.Informations.UUID,
+    "_uid":       insta.Informations.UsernameId,
+    "_csrftoken": insta.Informations.Token,
+    "id":         insta.Informations.UsernameId,
+    "experiments":GOINSTA_EXPERIMENTS,
+  })
+
+  // Because Instagram app does the same
+  _, err = insta.sendRequest("qe/sync/", generateSignature(string(bytes)), true)
+  if err != nil {
+    panic(err)
+  }
+
+  // Because Instagram app does the same
+  _, err = insta.sendRequest("friendships/autocomplete_user_list/?version=2", "", true, false)
+  if err != nil {
+    panic(err)
+  }
+
 	return nil
 }
 
@@ -207,22 +227,25 @@ func (insta *Instagram) FirstUserFeed(userid string) (response.UserFeedResponse,
 // If input was one string that we call maxid , mode is pagination
 // If input was two string can pagination by timestamp and maxid
 // If input was empty default value will select.
-func (insta *Instagram) UserFeed(strings ...string) (response.FeedsResponse, error) {
+func (insta *Instagram) UserFeed(name string, strings ...string) (response.FeedsResponse, error) {
 	var body []byte
 	var err error
 
+  userInfo, _ := insta.GetUsername(name)
+  usernameId := strconv.Itoa(userInfo.User.Pk)
+
 	if len(strings) == 2 { // maxid and timestamp
-		body, err = insta.sendRequest("feed/user/"+insta.Informations.UsernameId+"/?rank_token="+insta.Informations.RankToken+"&maxid="+strings[0]+"&min_timestamp="+strings[1]+"&ranked_content=true", "", false)
+		body, err = insta.sendRequest("feed/user/"+usernameId+"/?rank_token="+insta.Informations.RankToken+"&maxid="+strings[0]+"&min_timestamp="+strings[1]+"&ranked_content=true", "", false)
 		if err != nil {
 			return response.FeedsResponse{}, err
 		}
 	} else if len(strings) == 1 { // only maxid
-		body, err = insta.sendRequest("feed/user/"+insta.Informations.UsernameId+"/?rank_token="+insta.Informations.RankToken+"&maxid="+strings[0]+"&ranked_content=true", "", false)
+		body, err = insta.sendRequest("feed/user/"+usernameId+"/?rank_token="+insta.Informations.RankToken+"&maxid="+strings[0]+"&ranked_content=true", "", false)
 		if err != nil {
 			return response.FeedsResponse{}, err
 		}
 	} else if len(strings) == 0 { // nothing (current user)
-		body, err = insta.sendRequest("feed/user/"+insta.Informations.UsernameId+"/?rank_token="+insta.Informations.RankToken+"&ranked_content=true", "", false)
+		body, err = insta.sendRequest("feed/user/"+usernameId+"/?rank_token="+insta.Informations.RankToken+"&ranked_content=true", "", false)
 		if err != nil {
 			return response.FeedsResponse{}, err
 		}
