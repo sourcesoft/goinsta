@@ -17,14 +17,14 @@ func (insta *Instagram) NewRequest(endpoint string, post string) ([]byte, error)
 }
 
 func (insta *Instagram) sendRequest(endpoint string, post string, options ...bool) (body []byte, err error) {
-  isLoggedIn := false // Third argument
-  checkStatus := true // Forth argument
-  if len(options)== 1 {
-    isLoggedIn = options[0]
-  } else if len(options) == 2 {
-    isLoggedIn = options[0]
-    checkStatus = options[1]
-  }
+	isLoggedIn := false // Optional third argument
+	checkStatus := true // Optional forth argument
+	if len(options) == 1 {
+		isLoggedIn = options[0]
+	} else if len(options) == 2 {
+		isLoggedIn = options[0]
+		checkStatus = options[1]
+	}
 
 	if !insta.IsLoggedIn && !isLoggedIn {
 		return nil, fmt.Errorf("not logged in")
@@ -67,8 +67,10 @@ func (insta *Instagram) sendRequest(endpoint string, post string, options ...boo
 
 	insta.cookie = resp.Header.Get("Set-Cookie")
 
-	body, _ = ioutil.ReadAll(resp.Body)
-
+	body, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
 
 	if resp.StatusCode != 200 && checkStatus {
 		return nil, fmt.Errorf("Invalid status code %s", string(body))
